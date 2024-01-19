@@ -14,6 +14,25 @@ interface FileCallback {
     (fileInfo: { fileName: string; fileSize: number; destination: string }): { fileName?: string; destination?: string };
 }
 
+interface HandshakeData {
+    fileName?: string;
+    fileSize?: number;
+    chunksize?: number;
+}
+
+
+interface TransferedResponse {
+    success: boolean;
+    transfered?: number;
+    error?: string;
+}
+
+interface UpgradeResponse {
+    success: boolean;
+    fallbackArray?: string[];
+    error?: string;
+}
+
 class StreamLoader {
     #app: Express;
     #fileInfoStore: FileInfoStore;
@@ -100,11 +119,11 @@ class StreamLoader {
     */
     async #handleHandshake(req: Request, res: Response) {
         try {
-            const { fileName, fileSize, chunksize } = req.body || {};
+            const { fileName, fileSize, chunksize }: HandshakeData = req.body || {};
             let fileInfo: FileData = {};
-            fileInfo['fileName'] = fileName;
+            fileInfo['fileName'] = fileName as string;
             fileInfo['destination'] = '/';
-            fileInfo['fileSize'] = fileSize;
+            fileInfo['fileSize'] = fileSize as number;
 
             if (this.#cb !== undefined) {
                 let cbData = this.#cb({ ...(fileInfo as { fileName: string, destination: string, fileSize: number }) });
@@ -114,7 +133,7 @@ class StreamLoader {
                     fileInfo['destination'] = cbData.destination;
             }
 
-            fileInfo['chunksize'] = chunksize;
+            fileInfo['chunksize'] = chunksize as number;
             fileInfo['transferedSize'] = 0;
             let userId: string = uuidv4();
             fileInfo['writeStream'] = fs.createWriteStream(path.join((fileInfo['destination'] as string) + '/' + (fileInfo['fileName'] as string))).on('ready', () => {

@@ -146,6 +146,25 @@ class StreamLoader {
             res.json({ success: false, error: err });
         }
     }
+
+
+    /**
+     * To send the list of fallback during socket connection.
+     * @param req request
+     * @param res res
+    */
+    async #handleUpgrade(req: Request, res: Response) {
+        try {
+            const fallback: Array<string> = ['websocket', 'pooling'];
+            res.json({ success: true, fallbackArray: fallback });
+        } catch (err) {
+            this.onerror({ error: err });
+            res.json({ success: false, error: err });
+        }
+    }
+
+
+
     /**
      * 
      * @returns Express App

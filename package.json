@@ -1,0 +1,38 @@
+{
+  "name": "load-stream",
+  "version": "1.0.2",
+  "description": "A npm package to upload files as chunk ",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepaksuthar40128/loadStream.git"
+  },
+  "dependencies": {
+    "@types/uuid": "^9.0.7",
+    "express": "^4.18.2",
+    "uuid": "^9.0.1"
+  },
+  "keywords": [
+    "File-Upload",
+    "Stream",
+    "Chunks",
+    "ResumeAble-file-upload",
+    "multifile"
+  ],
+  "author": "Deepak Suthar",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/deepaksuthar40128/loadStream/issues"
+  },
+  "homepage": "https://github.com/deepaksuthar40128/loadStream#readme",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "nodemon": "^3.0.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -21,7 +21,6 @@ class loadStream {
      * @param {Object} options {uploadMethod:http|websocket,ChunkSize}
      */
     constructor(options = null) {
-        this.file = file;
         if (options) {
             this.#options.method = options.method ? options.method : 'http';
             this.#options.chunksize = options.chunksize ? options.chunksize : 1024 * 1024;

@@ -136,10 +136,10 @@ class StreamLoader {
             fileInfo['chunksize'] = chunksize as number;
             fileInfo['transferedSize'] = 0;
             let userId: string = uuidv4();
-            fileInfo['writeStream'] = fs.createWriteStream(path.join((fileInfo['destination'] as string) + '/' + (fileInfo['fileName'] as string))).on('ready', () => {
+            fileInfo['writeStream'] = fs.createWriteStream(path.join(path.resolve() + (fileInfo['destination'] as string) + '/' + (fileInfo['fileName'] as string))).on('ready', () => {
                 this.#fileInfoStore[userId] = fileInfo;
                 res.json({ handshake: true, userId });
-            }).on('error', (err) => {
+            }).on('error', (err: Error) => {
                 this.onerror({ error: err });
                 res.json({ handshake: false, error: err });
             });

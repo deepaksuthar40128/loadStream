@@ -1,6 +1,6 @@
 {
   "name": "load-stream",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A npm package to upload files as chunk ",
   "main": "src/index.js",
   "scripts": {

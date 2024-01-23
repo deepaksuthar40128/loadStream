@@ -117,7 +117,43 @@ npm install loadstream-client
 
 ### Integrate it into your client side:
 ```bash
-import LoadStream from 'loadstream-client'
+import loadStream from 'loadstream-client'
+```
+```bash
+/*
+  const url='http://localhost:5000'; // url is server's host url 
+*/
+let loader = new loadStream({ url }) // url is required to pass
+
+	const uploadFile = async (file) => {
+		try {
+			loader.upload(file);
+
+       loader.onprogress = (event) => {
+            console.log(event.progress);// progress Example: to use in progress bar
+            console.log(event.time); // Expected time remains in uploading file (in seconds)
+            console.log(event.speed);// Uploading speed (in bytes/sec)
+        }
+      
+        loader.onload = () => {
+          console.log("Completed");
+        }
+      
+        loader.onerror = (event) => {
+          console.log(event.error);
+        }
+        
+        const resumeUpload = ()=>{
+          loader.resume(); // returns true if resumed else false
+        }
+      
+        const pauseUpload = ()=>{
+          loader.stop();// returns true if paused else false
+        }
+
+		} catch (error) {
+			console.error("Upload error:", error);
+		}
 ```
 
 # Contributing

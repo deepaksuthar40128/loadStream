@@ -138,7 +138,15 @@ class StreamLoader {
             let userId: string = uuidv4();
             fileInfo['writeStream'] = fs.createWriteStream(path.join(path.resolve() + (fileInfo['destination'] as string) + '/' + (fileInfo['fileName'] as string))).on('ready', () => {
                 this.#fileInfoStore[userId] = fileInfo;
-                res.json({ handshake: true, userId });
+                res.json({
+                    handshake: true,
+                    userId, info:
+                    {
+                        file: fileInfo.fileName,
+                        size: fileInfo.fileSize,
+                        destination: fileInfo.destination
+                    }
+                });
             }).on('error', (err: Error) => {
                 this.onerror({ error: err });
                 res.json({ handshake: false, error: err });

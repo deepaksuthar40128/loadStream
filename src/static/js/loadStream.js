@@ -1,4 +1,4 @@
-class loadStream {
+class LoadStream {
     //options for transfer file
     #options = {
         method: 'http',
@@ -32,23 +32,28 @@ class loadStream {
      * @param {File|Blob|String} file File to Upload
      */
     async upload(file) {
-        this.file = file;
-        this.#fileSize = this.file.size;
-        if (this.#fileSize > 0) {
-            if (this.#options.method === 'http') {
-                let res = await this.#handShake();
-                if (res.handshake) {
-                    this.#userId = res.userId;
-                    this.#uploadFile();
-                } else {
-                    if (this.onerror)
-                        this.onerror({ error: res.error || "Something Wrong During Handshaking!" });
+        return new Promise(async (resolve, reject) => {
+            this.file = file;
+            this.#fileSize = this.file.size;
+            if (this.#fileSize > 0) {
+                if (this.#options.method === 'http') {
+                    let res = await this.#handShake();
+                    if (res.handshake) {
+                        this.#userId = res.userId;
+                        this.#uploadFile();
+                        resolve({ success: true, info: res.info });
+                    } else {
+                        if (this.onerror)
+                            this.onerror({ error: res.error || "Something Wrong During Handshaking!" });
+                        resolve({ success: false, error: res.error || "Something Wrong During Handshaking!" })
+                    }
+                } else if (this.#options.method === 'websocket') {
+                    // let socket = io({ path: '/loadStream.io' });
+                    resolve({ success: false, error: "Websocket Currently Unavalible!" })
+                    console.log("Currently Unavalible!");
                 }
-            } else if (this.#options.method === 'websocket') {
-                // let socket = io({ path: '/loadStream.io' });
-                console.log("Currently Unavalible!");
             }
-        }
+        })
     }
     /**
      * 
@@ -175,4 +180,4 @@ class loadStream {
             resolve(res);
         })
     }
-}
+} 

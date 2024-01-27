@@ -5,12 +5,12 @@
 
 ## Description
 
-Load Stream is a versatile package that facilitates the uploading of large files to a server in chunks. The package provides both server-side (`load-stream`) and client-side (`loadstream-client`) components. It utilizes HTTP short pooling to break files into chunks and send them to the server, providing multiple listeners for events like progress, completion, and errors.
+Load Stream is a versatile package that facilitates the uploading of large files to a server in chunks. The package provides both server-side (`load-stream`) and client-side (`loadstream-client`) components. It utilizes HTTP short polling to break files into chunks and send them to the server, providing multiple listeners for events like progress, completion, and errors.
 
 ### Features
 
 - Efficient file uploading with chunking
-- HTTP short pooling for improved performance
+- HTTP short polling for improved performance
 - Multiple event listeners: onprogress, onload, onerror
 - Methods for stopping and resuming uploads
 

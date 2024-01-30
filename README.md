@@ -77,8 +77,9 @@ You can include the client-side library via CDN in your HTML file:
   }
   let loader = new LoadStream(options); //options argument is optional fallback to default options
 
-  const uploadFile = (file)=>{
-      loader.upload(file);
+  const uploadFile = async(file)=>{
+      let fileInfo= await loader.upload(file);
+   //fileInfo contain the filename destination and size which is served by server after accepting the callback by user on server side integration
   }
 
   loader.onprogress = (event) => {

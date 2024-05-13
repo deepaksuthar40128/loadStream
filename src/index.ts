@@ -2,6 +2,10 @@ import express, { Request, Response, Express } from 'express';
 import path from 'path';
 import fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
+import websocket from 'websocket';
+import http from 'http'
+const wsServer = websocket.server;
+
 interface FileData {
     [key: string]: string | number | fs.WriteStream;
 }
@@ -11,7 +15,14 @@ interface FileInfoStore {
 }
 
 interface FileCallback {
-    (fileInfo: { fileName: string; fileSize: number; destination: string }): { fileName?: string; destination?: string };
+    (fileInfo: {
+        fileName: string;
+        fileSize: number;
+        destination: string
+    }): {
+        fileName?: string;
+        destination?: string
+    };
 }
 
 interface HandshakeData {
@@ -32,11 +43,18 @@ interface UpgradeResponse {
     fallbackArray?: string[];
     error?: string;
 }
+interface OpenSockets {
+    [key: string]: websocket.connection
+}
+
+
 
 class StreamLoader {
     #app: Express;
     #fileInfoStore: FileInfoStore;
-    #cb: FileCallback = (() => ({}));
+    #openSockets: OpenSockets;
+    #server: websocket.server;
+    #cb: FileCallback = (() => ({})); 
     onerror: Function = (e: { [key: string]: string }) => { console.log(e.error) };
 
     /**
@@ -57,13 +75,18 @@ class StreamLoader {
      * }
      *
      */
-    constructor(cb?: FileCallback) {
+    constructor(server: http.Server, cb?: FileCallback) {
         this.#app = express();
         this.#app.use(express.json());
         this.#fileInfoStore = {};
+        this.#openSockets = {};
+        this.#server = new wsServer({
+            httpServer: server
+        })
 
-        if (cb)
+        if (cb) {
             this.#cb = cb;
+        }
 
         this.#app.get('/loadStream/loadStream.js', (req: Request, res: Response) => {
             res.sendFile(path.resolve(__dirname + '/static/js/loadStream.js'));
@@ -71,6 +94,10 @@ class StreamLoader {
         this.#app.post('/loadStream/upload/:userId', this.#handleUpload.bind(this));
         this.#app.post('/loadStream/handshake', this.#handleHandshake.bind(this));
         this.#app.get('/loadStream/transfered/:userId', this.#handleTransfered.bind(this));
+
+
+        //webSocket Listeners
+        this.#server.on('request', this.#handleUpgrade.bind(this))
     }
 
     /**
@@ -136,10 +163,17 @@ class StreamLoader {
             fileInfo['chunksize'] = chunksize as number;
             fileInfo['transferedSize'] = 0;
             let userId: string = uuidv4();
-            fileInfo['writeStream'] = fs.createWriteStream(path.join((fileInfo['destination'] as string) + '/' + (fileInfo['fileName'] as string))).on('ready', () => {
+            fileInfo['writeStream'] = fs.createWriteStream(path.join(path.resolve() + (fileInfo['destination'] as string) + '/' + (fileInfo['fileName'] as string))).on('ready', () => {
                 this.#fileInfoStore[userId] = fileInfo;
-                res.json({ handshake: true, userId });
-            }).on('error', (err) => {
+                res.json({
+                    handshake: true, userId, info:
+                    {
+                        file: fileInfo.fileName,
+                        size: fileInfo.fileSize,
+                        destination: fileInfo.destination
+                    }
+                });
+            }).on('error', (err: Error) => {
                 this.onerror({ error: err });
                 res.json({ handshake: false, error: err });
             });
@@ -168,25 +202,46 @@ class StreamLoader {
 
 
     /**
-     * To send the list of fallback during socket connection.
-     * @param req request
-     * @param res res
+     * To handle connection upgrade from http to websocket
+     * @param req request 
     */
-    async #handleUpgrade(req: Request, res: Response) {
-        try {
-            const fallback: Array<string> = ['websocket', 'pooling'];
-            res.json({ success: true, fallbackArray: fallback });
+    async #handleUpgrade(request: websocket.request) { 
+        try { 
+            if (request.requestedProtocols.includes('loadstream')) {
+                const userId: string = request.resourceURL.query.userId as string;
+                let ws = request.accept(null, request.origin);
+                console.log("Connection Upgraded");
+                this.#openSockets[userId] = ws;
+                this.#wsListeners(ws);
+            }
+            else {
+                request.reject(101, "Unrecorgnised protocol, path must be via '/loadstream'");
+            }
         } catch (err) {
             this.onerror({ error: err });
-            res.json({ success: false, error: err });
         }
     }
 
 
+    /**
+     * listener on websocket connection (message,error,disconnect)
+     * @param ws websocket connection
+     */
+    async #wsListeners(ws: websocket.connection) {
+        ws.on('message', (data: websocket.Message) => {
+            if (data.type === 'utf8') {
+                let message = data.utf8Data;
+            }
+            else {
+                
+            }
+        })
+    }
+
 
     /**
      * 
-     * @returns Express App
+     * @returns Express App to use as middleware
      */
     load(): Express {
         return this.#app;

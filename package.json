@@ -1,12 +1,12 @@
 {
   "name": "load-stream",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "A npm package to upload files as chunk ",
   "main": "src/index.js",
   "scripts": {
     "start": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm i & tsc & npm link"
   },
   "repository": {
     "type": "git",
@@ -15,7 +15,8 @@
   "dependencies": {
     "@types/uuid": "^9.0.7",
     "express": "^4.18.2",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "websocket": "^1.0.34"
   },
   "keywords": [
     "File-Upload",
@@ -32,6 +33,7 @@
   "homepage": "https://github.com/deepaksuthar40128/loadStream#readme",
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/websocket": "^1.0.10",
     "nodemon": "^3.0.2",
     "typescript": "^5.3.3"
   }

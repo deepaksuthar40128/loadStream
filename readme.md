@@ -69,7 +69,7 @@ You can include the client-side library via CDN in your HTML file:
   /*
     options = {
      chunksize: 1024 * 1024, // default 1024*1024 (in bytes)
-     method: 'http' or 'websocket' // websocket currently unavailabile
+     method: 'http' or 'websocket' // ['websocket','http'] -> fallback from websocket to http
     }
   */
   let options = {

@@ -54,8 +54,8 @@ class StreamLoader {
     #fileInfoStore: FileInfoStore;
     #openSockets: OpenSockets;
     #server: websocket.server;
-    #cb: FileCallback = (() => ({})); 
-    onerror: Function = (e: { [key: string]: string }) => { console.log(e.error) };
+    #cb: FileCallback = (() => ({}));
+    onerror: Function = (e: { [key: string]: string }) => {  };
 
     /**
      *
@@ -81,7 +81,9 @@ class StreamLoader {
         this.#fileInfoStore = {};
         this.#openSockets = {};
         this.#server = new wsServer({
-            httpServer: server
+            httpServer: server,
+            maxReceivedFrameSize:100000000,
+            maxReceivedMessageSize:1024*1024*10
         })
 
         if (cb) {
@@ -114,7 +116,7 @@ class StreamLoader {
             chunkData.push(chunk);
         });
 
-        req.on('error', () => {
+        req.on('error', (E) => { 
             this.onerror({ error: 'Something Wrong during upload chunks' });
             res.json({ success: false, error: 'Something Wrong during upload chunks' });
         });
@@ -205,14 +207,14 @@ class StreamLoader {
      * To handle connection upgrade from http to websocket
      * @param req request 
     */
-    async #handleUpgrade(request: websocket.request) { 
-        try { 
-            if (request.requestedProtocols.includes('loadstream')) {
-                const userId: string = request.resourceURL.query.userId as string;
+    async #handleUpgrade(request: websocket.request) {
+        try {
+            if (request.requestedProtocols.includes('loadstream')) { 
+                const userId: string = request.resourceURL.query.userId as string; 
                 let ws = request.accept(null, request.origin);
-                console.log("Connection Upgraded");
+                // console.log("Connection Upgraded");
                 this.#openSockets[userId] = ws;
-                this.#wsListeners(ws);
+                this.#wsListeners(ws,userId);
             }
             else {
                 request.reject(101, "Unrecorgnised protocol, path must be via '/loadstream'");
@@ -227,13 +229,48 @@ class StreamLoader {
      * listener on websocket connection (message,error,disconnect)
      * @param ws websocket connection
      */
-    async #wsListeners(ws: websocket.connection) {
+    async #wsListeners(ws: websocket.connection,userId:string) {
         ws.on('message', (data: websocket.Message) => {
             if (data.type === 'utf8') {
-                let message = data.utf8Data;
-            }
-            else {
-                
+                let message = JSON.parse(data.utf8Data);
+                let chunkData: any = [];
+                if (message.type === 'fileData') { 
+                    let userId = message.payload.userId;
+                    let fileInfo = this.#fileInfoStore[userId];
+                    let chunk: Buffer = Buffer.from(message.payload.fileData);
+                    chunkData.push(chunk);
+                    chunkData = Buffer.concat(chunkData);
+                    if (chunkData.length === fileInfo.chunksize) {
+                        fileInfo.transferedSize += chunkData.length;
+                        (fileInfo.writeStream as fs.WriteStream).write(chunkData);
+                        let msg = JSON.stringify({success:true,msg:'chunk upload'})
+                        ws.send(msg);
+                    } else if (chunkData.length === (fileInfo.fileSize as number % (fileInfo.chunksize as number))) {
+                        fileInfo.transferedSize += chunkData.length;
+                        (fileInfo.writeStream as fs.WriteStream).write(chunkData);
+                        let msg = JSON.stringify({success:true,msg:'file Uploaded'})
+                        ws.send(msg);
+                        (fileInfo.writeStream as fs.WriteStream).end();
+                        delete this.#fileInfoStore[userId];
+                    } else {
+                        this.onerror({ error: 'Invalid Chunk Size neither a chunksize nor a last chunksize!' });
+                        let msg = JSON.stringify({success:false,msg:'Invalid Chunk Size neither a chunksize nor a last chunksize!'})
+                        ws.send(msg); 
+                    }
+                }
+                else if (message.type === 'TransferedSize') { 
+                    try { 
+                        let fileInfo = this.#fileInfoStore[userId]; 
+                        ws.send(JSON.stringify({ success: true, type: 'TransferedSize', transfered: fileInfo.transferedSize }));
+                    } catch (err) {
+                        this.onerror({ error: err });
+                        ws.close();
+                    }
+                }
+
+            } else {
+                let msg = "invalid listner";
+                ws.send(msg);
             }
         })
     }

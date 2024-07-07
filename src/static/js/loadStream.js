@@ -1,3 +1,5 @@
+'use strict'
+
 class LoadStream {
     //options for transfer file
     #options = {
@@ -13,6 +15,7 @@ class LoadStream {
     #isStoped = false;
     #userId = null;
     #ws = null;
+    #promiseResolver = null;
     //EventListeners
     onprogress = null;
     onload = null;
@@ -73,9 +76,9 @@ class LoadStream {
                     else if (this.#options.method === 'websocket') {
 
                         //check for connection upgrade http->websocket
-                        let connectionUpgradeResult = await this.#upgrade();
+                        let connectionUpgradeResult = await this.#upgrade(); 
                         if (connectionUpgradeResult.websocket) {
-                            //connection switched to websocket
+                            //connection switched to websocket 
                             this.#uploadFileWS();
                         }
                         else {
@@ -235,29 +238,29 @@ class LoadStream {
     async #upgrade() {
         return new Promise(async (resolve, reject) => {
             try {
-                this.#ws = new WebSocket(`ws://localhost:3000?uresId=${this.#userId}`, ['loadstream']);
+                this.#ws = new WebSocket(`ws://localhost:3000?userId=${this.#userId}`, ['loadstream']);
                 this.#ws.onopen = (e) => {
                     this.#addWSListeners();
                     resolve({ websocket: true });
                 }
-                this.#ws.onerror = e => {
+                this.#ws.onerror = e => { 
                     resolve({ websocket: false, reason: "Upgrade fail" });
                 }
-            } catch (err) {
-                console.log(err);
+            } catch (err) { 
                 resolve({ websocket: false, reason: err });
             }
         })
     }
-    #addWSListeners() {
-        this.#ws.on('message', (e) => {
+    
+    #addWSListeners() { 
+        this.#ws.onmessage = (e) => {
             let message = e.data;
-            message = JSON.parse(message);
-            if (message.type === 'TransferedSize') {
-                let transferEvent = new Event('transferEvent');
-                dispatchEvent(transferEvent);
+            message = JSON.parse(message);  
+            if(this.#promiseResolver){
+                if(this.#promiseResolver)this.#promiseResolver(message);
+                this.#promiseResolver = null; 
             }
-        })
+        }
     }
     async #uploadFileWS() {
         try {
@@ -266,17 +269,17 @@ class LoadStream {
                 if (this.onerror)
                     this.onerror({ error: tansferResponse.error || "Something went wrong during Getting old Transfer." });
                 return;
-            }
-
+            } 
             let transferedSize = tansferResponse.transfered;
             while (transferedSize < this.#fileSize) {
                 let chunk = this.file.slice(transferedSize, transferedSize + this.#options.chunksize);
-                let res = await this.#uploadChunk(chunk);
+                let res = await this.#uploadChunkWs(chunk); 
                 if (!res.success) {
-                    break;
+                    throw new Error(res.msg)
                 }
                 transferedSize += this.#options.chunksize;
                 let progress = (transferedSize / this.#fileSize) * 100;
+                // console.log(progress)
                 let time = this.#expectedTime(transferedSize);
                 let speed = this.#uploadSpeed();
                 if (this.onprogress)
@@ -293,15 +296,40 @@ class LoadStream {
         }
     }
     async #getTransferedSizeWS() {
-        return new Promise(async (resolve, reject) => {
-            this.#ws.send(JSON.stringify({ type: 'TransferedSize', payload: null }));
+        return new Promise(async (resolve, reject) => { 
+            this.#ws.send(JSON.stringify({ type: 'TransferedSize',userId:this.#userId, payload: null }));
+            this.#promiseResolver = resolve
         })
     }
 
-    async #sendDataWS(type, payload) {
+    // async #sendDataWS(type, payload){
+    //     return new Promise((resolve, reject) => {
+    //         this.#ws.send(JSON.stringify({ type, payload }));
+    //     })
+    // }
+
+    async #uploadChunkWs(chunk) {
+        let stime = Date.now();
         return new Promise((resolve, reject) => {
-            this.#ws.send(JSON.stringify({ type, payload }));
-
-        })
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(chunk);
+            reader.onload = (e) => {
+                try { 
+                    let fileData =   Array.from(new Uint8Array(e.target.result)); 
+                    this.#ws.send(JSON.stringify({type: 'fileData', payload: {fileData: fileData, userId: this.#userId}}));
+                    // resolve();
+                    this.#promiseResolver = (data)=>{
+                        this.#currentTransferTime = Date.now()-stime;
+                        resolve(data);
+                    };
+                } catch (error) { 
+                    reject(error);
+                }
+            };
+            reader.onerror = (e) => { 
+                reject(e);
+            };
+        });
     }
+    
 } 

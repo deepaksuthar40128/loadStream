@@ -84,7 +84,7 @@ You can include the client-side library via CDN in your HTML file:
   loader.onprogress = (event) => {
       console.log(event.progress);// progress Example: to use in progress bar
       console.log(event.time); // Expected time remains in uploading file (in seconds)
-      console.log(event.speed);// Uploading speed (in bytes/sec)
+      console.log(event.speed); // Uploading speed (in bytes/sec) 
   }
 
   loader.onload = () => {
